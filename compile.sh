@@ -1,0 +1,1 @@
+g++ -pthread -o build/test.o test.c -lglfw -lGLU -lGL -lXrandr -lXxf86vm -lXi -lXinerama -lX11 -lrt -ldl
