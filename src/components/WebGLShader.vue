@@ -28,7 +28,9 @@ const props = defineProps({
       uniform float u_zoom;
 
       void main() {
+        float aspect = u_resolution.x / u_resolution.y;
         vec2 uv = (gl_FragCoord.xy / u_resolution) * u_zoom + u_offset;
+        uv = uv * vec2(aspect, 1.0);
 
         // Grille
         vec2 grid = fract(uv * 10.0);
@@ -74,6 +76,9 @@ let isDragging = false;
 let lastMousePos = { x: 0, y: 0 };
 const zoom = ref(1.0);
 
+// Cache des uniform locations
+let uniformLocations = {};
+
 function createShader(gl, type, source) {
   const shader = gl.createShader(type);
   gl.shaderSource(shader, source);
@@ -117,6 +122,10 @@ function initWebGL() {
     const fragShader = createShader(gl, gl.FRAGMENT_SHADER, props.fragmentShader);
     program = createProgram(gl, vertShader, fragShader);
 
+    // Cleanup des shaders après linking
+    gl.deleteShader(vertShader);
+    gl.deleteShader(fragShader);
+
     // Buffer pour un rectangle plein écran
     const positions = new Float32Array([
       -1, -1,
@@ -135,6 +144,14 @@ function initWebGL() {
 
     gl.useProgram(program);
 
+    // Cache des uniform locations
+    uniformLocations = {
+      resolution: gl.getUniformLocation(program, 'u_resolution'),
+      time: gl.getUniformLocation(program, 'u_time'),
+      offset: gl.getUniformLocation(program, 'u_offset'),
+      zoom: gl.getUniformLocation(program, 'u_zoom')
+    };
+
     // Démarrer l'animation
     render();
 
@@ -149,26 +166,21 @@ function render() {
 
   const time = (Date.now() - startTime) / 1000;
 
-  // Uniforms
-  const resolutionLocation = gl.getUniformLocation(program, 'u_resolution');
-  const timeLocation = gl.getUniformLocation(program, 'u_time');
-  const offsetLocation = gl.getUniformLocation(program, 'u_offset');
-  const zoomLocation = gl.getUniformLocation(program, 'u_zoom');
-
-  if (resolutionLocation) {
-    gl.uniform2f(resolutionLocation, props.width, props.height);
+  // Uniforms avec locations en cache
+  if (uniformLocations.resolution) {
+    gl.uniform2f(uniformLocations.resolution, props.width, props.height);
   }
 
-  if (timeLocation) {
-    gl.uniform1f(timeLocation, time);
+  if (uniformLocations.time) {
+    gl.uniform1f(uniformLocations.time, time);
   }
 
-  if (offsetLocation) {
-    gl.uniform2f(offsetLocation, offset.value.x, offset.value.y);
+  if (uniformLocations.offset) {
+    gl.uniform2f(uniformLocations.offset, offset.value.x, offset.value.y);
   }
 
-  if (zoomLocation) {
-    gl.uniform1f(zoomLocation, zoom.value);
+  if (uniformLocations.zoom) {
+    gl.uniform1f(uniformLocations.zoom, zoom.value);
   }
 
   gl.viewport(0, 0, props.width, props.height);
@@ -198,8 +210,8 @@ onMounted(() => {
     const deltaX = (e.clientX - lastMousePos.x) / props.width;
     const deltaY = (e.clientY - lastMousePos.y) / props.height;
 
-    offset.value.x -= deltaX * zoom.value;
-    offset.value.y += deltaY * zoom.value;
+    offset.value.x -= deltaX / zoom.value; // Division au lieu de multiplication
+    offset.value.y += deltaY / zoom.value; // Division au lieu de multiplication
 
     lastMousePos = { x: e.clientX, y: e.clientY };
   });
@@ -218,22 +230,25 @@ onMounted(() => {
   canvasEl.addEventListener('wheel', (e) => {
     e.preventDefault();
 
-    // Position de la souris en coordonnées normalisées
+    // Position de la souris en coordonnées normalisées (0 à 1)
     const rect = canvasEl.getBoundingClientRect();
     const mouseX = (e.clientX - rect.left) / props.width;
-    const mouseY = (e.clientY - rect.top) / props.height;
+    const mouseY = 1.0 - (e.clientY - rect.top) / props.height;
 
     // Position dans l'espace monde avant le zoom
-    const worldX = mouseX * zoom.value + offset.value.x;
-    const worldY = mouseY * zoom.value + offset.value.y;
+    const worldX = mouseX / zoom.value + offset.value.x;
+    const worldY = mouseY / zoom.value + offset.value.y;
 
-    // Appliquer le zoom
-    const zoomFactor = e.deltaY > 0 ? 1.1 : 0.9;
-    zoom.value *= zoomFactor;
+    // Appliquer le zoom (inverser le sens)
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1; // Inversé !
+    const newZoom = zoom.value * zoomFactor;
 
     // Ajuster l'offset pour garder le point sous la souris fixe
-    offset.value.x = worldX - mouseX * zoom.value;
-    offset.value.y = worldY - mouseY * zoom.value;
+    offset.value.x = worldX - mouseX / newZoom;
+    offset.value.y = worldY - mouseY / newZoom;
+
+    zoom.value = newZoom;
+    console.log(zoom)
   });
 
   canvasEl.style.cursor = 'grab';
@@ -242,6 +257,11 @@ onMounted(() => {
 onBeforeUnmount(() => {
   if (animationId) {
     cancelAnimationFrame(animationId);
+  }
+
+  // Cleanup WebGL resources
+  if (gl && program) {
+    gl.deleteProgram(program);
   }
 });
 
@@ -255,7 +275,6 @@ watch(() => [props.vertexShader, props.fragmentShader], () => {
 </script>
 
 <style scoped>
-
 canvas {
   display: block;
   border: 1px solid #333;

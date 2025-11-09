@@ -1,14 +1,18 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import FractalView from "@/views/FractalView.vue";
+import JuliaFractalView from "@/views/JuliaFractalView.vue";
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
-  routes: [
+  routes:[
     {
-      path: '/fractal',
-      name: 'fractal',
-      component: FractalView,
+      path: '/julia',
+      name: 'julia',
+      component: JuliaFractalView,
     },
+    {
+        path: '/',
+        redirect: '/julia',
+    }
   ],
 })
 

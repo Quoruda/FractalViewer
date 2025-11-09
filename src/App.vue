@@ -25,4 +25,12 @@ import { RouterLink, RouterView } from 'vue-router'
   background-color: rgba(255, 255, 255, 0.8);
 }
 
+.body{
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  font-family: Arial, sans-serif;
+}
+
 </style>
