@@ -76,6 +76,10 @@ let isDragging = false;
 let lastMousePos = { x: 0, y: 0 };
 const zoom = ref(1.0);
 
+// Variables pour le tactile
+let lastTouchDistance = 0;
+let lastTouchCenter = { x: 0, y: 0 };
+
 // Cache des uniform locations
 let uniformLocations = {};
 
@@ -192,12 +196,26 @@ function render() {
   animationId = requestAnimationFrame(render);
 }
 
+// Fonctions utilitaires pour le tactile
+function getTouchDistance(touches) {
+  const dx = touches[0].clientX - touches[1].clientX;
+  const dy = touches[0].clientY - touches[1].clientY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function getTouchCenter(touches) {
+  return {
+    x: (touches[0].clientX + touches[1].clientX) / 2,
+    y: (touches[0].clientY + touches[1].clientY) / 2
+  };
+}
+
 onMounted(() => {
   initWebGL();
 
-  // Événements souris pour le déplacement
   const canvasEl = canvas.value;
 
+  // Événements souris pour le déplacement
   canvasEl.addEventListener('mousedown', (e) => {
     isDragging = true;
     lastMousePos = { x: e.clientX, y: e.clientY };
@@ -210,8 +228,8 @@ onMounted(() => {
     const deltaX = (e.clientX - lastMousePos.x) / props.width;
     const deltaY = (e.clientY - lastMousePos.y) / props.height;
 
-    offset.value.x -= deltaX / zoom.value; // Division au lieu de multiplication
-    offset.value.y += deltaY / zoom.value; // Division au lieu de multiplication
+    offset.value.x -= deltaX / zoom.value;
+    offset.value.y += deltaY / zoom.value;
 
     lastMousePos = { x: e.clientX, y: e.clientY };
   });
@@ -230,28 +248,115 @@ onMounted(() => {
   canvasEl.addEventListener('wheel', (e) => {
     e.preventDefault();
 
-    // Position de la souris en coordonnées normalisées (0 à 1)
     const rect = canvasEl.getBoundingClientRect();
     const mouseX = (e.clientX - rect.left) / props.width;
     const mouseY = 1.0 - (e.clientY - rect.top) / props.height;
 
-    // Position dans l'espace monde avant le zoom
     const worldX = mouseX / zoom.value + offset.value.x;
     const worldY = mouseY / zoom.value + offset.value.y;
 
-    // Appliquer le zoom (inverser le sens)
-    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1; // Inversé !
+    const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
     const newZoom = zoom.value * zoomFactor;
 
-    // Ajuster l'offset pour garder le point sous la souris fixe
     offset.value.x = worldX - mouseX / newZoom;
     offset.value.y = worldY - mouseY / newZoom;
 
     zoom.value = newZoom;
-    console.log(zoom)
   });
 
+  // ===== ÉVÉNEMENTS TACTILES =====
+
+  canvasEl.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+
+    if (e.touches.length === 1) {
+      // Un doigt : déplacement
+      isDragging = true;
+      lastMousePos = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY
+      };
+    } else if (e.touches.length === 2) {
+      // Deux doigts : zoom
+      isDragging = false;
+      lastTouchDistance = getTouchDistance(e.touches);
+      lastTouchCenter = getTouchCenter(e.touches);
+    }
+  }, { passive: false });
+
+  canvasEl.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+
+    if (e.touches.length === 1 && isDragging) {
+      // Déplacement avec un doigt
+      const touch = e.touches[0];
+      const deltaX = (touch.clientX - lastMousePos.x) / props.width;
+      const deltaY = (touch.clientY - lastMousePos.y) / props.height;
+
+      offset.value.x -= deltaX / zoom.value;
+      offset.value.y += deltaY / zoom.value;
+
+      lastMousePos = { x: touch.clientX, y: touch.clientY };
+    } else if (e.touches.length === 2) {
+      // Pinch-to-zoom avec deux doigts
+      const currentDistance = getTouchDistance(e.touches);
+      const currentCenter = getTouchCenter(e.touches);
+
+      // Calculer le facteur de zoom
+      const zoomFactor = currentDistance / lastTouchDistance;
+
+      // Position du centre en coordonnées normalisées
+      const rect = canvasEl.getBoundingClientRect();
+      const centerX = (currentCenter.x - rect.left) / props.width;
+      const centerY = 1.0 - (currentCenter.y - rect.top) / props.height;
+
+      // Position dans l'espace monde avant le zoom
+      const worldX = centerX / zoom.value + offset.value.x;
+      const worldY = centerY / zoom.value + offset.value.y;
+
+      // Appliquer le zoom
+      const newZoom = zoom.value * zoomFactor;
+
+      // Ajuster l'offset pour garder le point central fixe
+      offset.value.x = worldX - centerX / newZoom;
+      offset.value.y = worldY - centerY / newZoom;
+
+      zoom.value = newZoom;
+
+      // Déplacement du centre pendant le pinch
+      const centerDeltaX = (currentCenter.x - lastTouchCenter.x) / props.width;
+      const centerDeltaY = (currentCenter.y - lastTouchCenter.y) / props.height;
+
+      offset.value.x -= centerDeltaX / zoom.value;
+      offset.value.y += centerDeltaY / zoom.value;
+
+      lastTouchDistance = currentDistance;
+      lastTouchCenter = currentCenter;
+    }
+  }, { passive: false });
+
+  canvasEl.addEventListener('touchend', (e) => {
+    e.preventDefault();
+
+    if (e.touches.length === 0) {
+      isDragging = false;
+    } else if (e.touches.length === 1) {
+      // Retour au mode déplacement avec un seul doigt
+      isDragging = true;
+      lastMousePos = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY
+      };
+    }
+  }, { passive: false });
+
+  canvasEl.addEventListener('touchcancel', (e) => {
+    e.preventDefault();
+    isDragging = false;
+  }, { passive: false });
+
   canvasEl.style.cursor = 'grab';
+  canvasEl.style.touchAction = 'none'; // Désactiver les gestes natifs du navigateur
 });
 
 onBeforeUnmount(() => {
@@ -278,6 +383,11 @@ watch(() => [props.vertexShader, props.fragmentShader], () => {
 canvas {
   display: block;
   border: 1px solid #333;
+  touch-action: none; /* Désactiver les gestes natifs */
+  user-select: none; /* Empêcher la sélection de texte */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 .error {
