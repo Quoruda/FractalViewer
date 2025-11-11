@@ -1,17 +1,27 @@
-import { createRouter, createWebHistory } from 'vue-router'
-import JuliaFractalView from "@/views/JuliaFractalView.vue";
+import {createRouter, createWebHashHistory, createWebHistory} from 'vue-router'
 
 const router = createRouter({
-  history: createWebHistory(import.meta.env.BASE_URL),
+  history: createWebHashHistory(import.meta.env.BASE_URL),
   routes:[
+      {
+          path: '/',
+          name: 'julia',
+            component: () => import('@/views/JuliaFractalView.vue'),
+      },
     {
       path: '/julia',
       name: 'julia',
-      component: JuliaFractalView,
+      component: () => import('@/views/JuliaFractalView.vue'),
     },
     {
-        path: '/',
-        redirect: '/julia',
+        path: '/mandelbrot',
+        name: 'mandelbrot',
+        component: () => import('@/views/MandelbrotFractalView.vue'),
+    },
+    {
+        path: '/burningship',
+        name: 'burningship',
+        component: () => import('@/views/BurningShipFractalView.vue'),
     }
   ],
 })
