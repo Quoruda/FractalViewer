@@ -1,11 +1,148 @@
 <script setup>
 
 import FullScreenShader from "@/components/FullScreenShader.vue";
-import {computed, ref} from "vue";
+import {computed, ref, watch, onUnmounted} from "vue";
 import RangeSlider from "@/components/RangeSlider.vue";
 
-const  r = ref(-1);
+const r = ref(-1);
 const i = ref(0);
+const demoMode = ref(false);
+
+let animationId = null;
+let startTime = null;
+
+// Collection de paramètres Julia intéressants
+const interestingJuliaSets = [
+  // Classiques célèbres
+  { r: -0.7269, i: 0.1889 },      // Dendrite de Douady
+  { r: -0.8, i: 0.156 },          // Dragon de Douady
+  { r: -0.162, i: 1.04 },         // Lapin de Douady
+  { r: -0.12, i: 0.74 },          // San Marco fractal
+  { r: -0.391, i: -0.587 },       // Siegel disk
+
+  // Spirales
+  { r: 0.285, i: 0.01 },          // Spirale simple
+  { r: 0.45, i: 0.1428 },         // Spirale complexe
+  { r: -0.70176, i: -0.3842 },    // Spirale de Douady
+
+  // Formes florales
+  { r: -0.4, i: 0.6 },            // Fleur à 5 pétales
+  { r: 0.3, i: 0.5 },             // Branches florales
+  { r: -0.54, i: 0.54 },          // Fleur diagonale
+  { r: 0.355, i: 0.355 },         // Fleur symétrique
+  { r: -0.1, i: 0.651 },          // Fleur de corail
+
+  // Formes géométriques
+  { r: 0.4, i: 0.2 },             // Feuille
+  { r: -0.7, i: 0.27015 },        // Forme connectée
+  { r: 0.285, i: 0.0 },           // Croix parfaite
+  { r: -0.835, i: -0.2321 },      // Triangle
+  { r: -0.8, i: 0.0 },            // Forme en H
+
+  // Formes organiques
+  { r: -0.79, i: 0.15 },          // Ver
+  { r: -0.162, i: 1.04 },         // Lapin
+  { r: 0.0, i: 0.8 },             // Arbre
+  { r: -0.4, i: -0.59 },          // Salamandre
+  { r: -1.476, i: 0.0 },          // Étoile de mer
+
+  // Formes complexes
+  { r: 0.27334, i: 0.00742 },     // Galaxie
+  { r: -0.038088, i: 0.9754633 }, // Plume
+  { r: -0.11, i: 0.6557 },        // Toile d'araignée
+  { r: -0.194, i: 0.6557 },       // Cristal de glace
+  { r: 0.3, i: -0.01 },           // Étoile à branches
+
+  // Points sur le bord
+  { r: -0.75, i: 0.11 },          // Presque dragon
+  { r: -0.70176, i: 0.3842 },     // Spirale inversée
+  { r: 0.28, i: 0.008 },          // Spirale fine
+  { r: -0.481762, i: -0.531657 }, // Constellation
+
+  // Formes symétriques
+  { r: 0.0, i: 1.0 },             // Symétrie verticale
+  { r: -1.0, i: 0.0 },            // Symétrie horizontale
+  { r: 0.32, i: 0.043 },          // Double spirale
+  { r: -0.618, i: 0.0 },          // Nombre d'or
+
+  // Formes chaotiques intéressantes
+  { r: -0.4, i: -0.6 },           // Chaos contrôlé
+  { r: 0.34, i: -0.05 },          // Turbulence
+  { r: -0.123, i: 0.745 },        // Fractale de Fatou
+  { r: -0.1, i: -0.8 },           // Éclair
+
+  // Formes rares
+  { r: -1.25, i: 0.0 },           // Grande étoile
+  { r: 0.0, i: -0.8 },            // Arbre inversé
+  { r: -0.75, i: 0.0 },           // Croix de Malte
+  { r: 0.28, i: -0.53 },          // Hélice
+  { r: -0.221, i: -0.713 },       // Tourbillon
+
+  // Ensembles presque-circulaires
+  { r: -0.12256, i: 0.74486 },    // Presque cercle
+  { r: -0.7, i: 0.3 },            // Ovale
+  { r: 0.28, i: 0.53 },           // Lentille
+];
+
+const updateDemo = (timestamp) => {
+  if (!startTime) startTime = timestamp;
+  const elapsed = (timestamp - startTime) / 1000;
+
+  // Durée de chaque ensemble (en secondes)
+  const setDuration = 1;
+  // Durée de transition entre ensembles
+  const transitionDuration = 2;
+
+  const totalDuration = setDuration + transitionDuration;
+  const cyclePosition = (elapsed % (totalDuration * interestingJuliaSets.length)) / totalDuration;
+
+  const currentIndex = Math.floor(cyclePosition);
+  const nextIndex = (currentIndex + 1) % interestingJuliaSets.length;
+
+  const localTime = cyclePosition - currentIndex;
+
+  let t;
+  if (localTime < setDuration / totalDuration) {
+    // Phase statique : rester sur l'ensemble actuel
+    t = 0;
+  } else {
+    // Phase de transition : interpolation fluide vers le suivant
+    const transitionProgress = (localTime - setDuration / totalDuration) / (transitionDuration / totalDuration);
+    // Utilise une fonction d'easing pour une transition plus douce
+    t = transitionProgress < 0.5
+        ? 2 * transitionProgress * transitionProgress
+        : 1 - Math.pow(-2 * transitionProgress + 2, 2) / 2;
+  }
+
+  const current = {r: r.value, i: i.value};
+  const next = interestingJuliaSets[nextIndex];
+
+  // Interpolation entre les deux ensembles
+  r.value = current.r + (next.r - current.r) * t;
+  i.value = current.i + (next.i - current.i) * t;
+
+  if (demoMode.value) {
+    animationId = requestAnimationFrame(updateDemo);
+  }
+};
+
+watch(demoMode, (newValue) => {
+  if (newValue) {
+    startTime = null;
+    animationId = requestAnimationFrame(updateDemo);
+  } else {
+    if (animationId) {
+      cancelAnimationFrame(animationId);
+      animationId = null;
+    }
+  }
+});
+
+onUnmounted(() => {
+  if (animationId) {
+    cancelAnimationFrame(animationId);
+  }
+});
 
 const juliaShader = computed(() => `
 precision highp float;
@@ -13,9 +150,9 @@ uniform vec2 u_resolution;
 uniform vec2 u_offset;
 uniform float u_zoom;
 vec2 c = vec2(${r.value}, ${i.value});
-const float maxLimit = 64.0;
-const int MAX_ITER = 1000;
-int dynamicMaxIterations  = int(80.0 + 60.0 * log(u_zoom + 1.0));
+const float maxLimit = 4.0;
+const int MAX_ITER = 2000;
+int dynamicMaxIterations  = int(800.0 + 60.0 * log(u_zoom + 1.0));
 
 
 vec2 multiplyComplex(vec2 a, vec2 b){
@@ -24,6 +161,13 @@ vec2 multiplyComplex(vec2 a, vec2 b){
 
 float magnitudeSquared(vec2 v){
   return v.x * v.x + v.y * v.y;
+}
+
+// Fonction pour convertir HSV en RGB
+vec3 hsv2rgb(vec3 c) {
+  vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+  vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+  return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
 void main(){
@@ -39,13 +183,19 @@ void main(){
     z = multiplyComplex(z, z) + c;
     magnitude = magnitudeSquared(z);
     if(magnitude > maxLimit){
-      vec3 coldColor = vec3(1.00, 0.50, 0.25);
-      vec3 warmColor = vec3(0.08, 0.20, 0.35);
-
       float t = float(i) / float(dynamicMaxIterations);
-      t = 0.5 + 0.5 * sin(6.2831 * t * 1.5);  // Crée des oscillations subtiles
-      vec3 color = mix(coldColor, warmColor, t);
 
+      // Lissage pour des transitions plus douces
+      float log_zn = log(magnitude) / 2.0;
+      float nu = log(log_zn / log(2.0)) / log(2.0);
+      t = (float(i) + 1.0 - nu) / float(dynamicMaxIterations);
+
+      // Créer un dégradé de couleurs harmonieux
+      float hue = fract(t * 2.0);
+      float saturation = 0.65 + 0.15 * sin(t * 20.0);
+      float brightness = 0.5 + 0.4 * sin(t * 15.0);
+
+      vec3 color = hsv2rgb(vec3(hue, saturation, brightness));
 
       gl_FragColor = vec4(color, 1.0);
       break;
@@ -54,35 +204,102 @@ void main(){
 }
 `);
 
-
-
-
 </script>
-
 
 <template>
   <FullScreenShader :fragmentShader="juliaShader">
     <RangeSlider
         v-model="r"
-        :min="-1"
-        :max="1"
-        :step="0.001"
+        :min="-2"
+        :max="2"
+        :step="0.0001"
         :decimals="3"
         label="Partie réelle"
+        :disabled="demoMode"
     />
 
     <RangeSlider
         v-model="i"
-        :min="-1"
-        :max="1"
-        :step="0.001"
+        :min="-2"
+        :max="2"
+        :step="0.0001"
         :decimals="3"
         label="Partie imaginaire"
+        :disabled="demoMode"
     />
+
+    <div style="margin-top: 1rem; margin-left: 10px">
+      <!-- Label avec checkbox masquée + élément visuel personnalisé -->
+      <label class="demo-toggle" style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+        <input
+            type="checkbox"
+            v-model="demoMode"
+            class="demo-checkbox-input"
+            aria-label="Activer le mode démonstration"
+        />
+        <span class="demo-custom" aria-hidden="true"></span>
+        <span class="demo-label" style="user-select: none;">Mode démonstration</span>
+      </label>
+    </div>
   </FullScreenShader>
 </template>
 
-<style>
+<style scoped>
+/* Style de la checkbox personnalisée */
+.demo-toggle { gap: 0.5rem; }
+.demo-checkbox-input {
+  /* Cacher l'input natif mais le garder focusable/accesssible */
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+}
 
+.demo-custom {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: 2px solid rgba(0,0,0,0.45);
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 180ms ease;
+  box-sizing: border-box;
+  flex: none;
+}
+
+/* Le petit tick (créé avec une bordure diagonale) */
+.demo-custom::after {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 5px;
+  border-left: 2.5px solid transparent;
+  border-bottom: 2.5px solid transparent;
+  transform: rotate(-45deg) scale(0);
+  transform-origin: center;
+  transition: transform 120ms ease-in-out, border-color 120ms ease-in-out;
+}
+
+/* Etat coché */
+.demo-checkbox-input:checked + .demo-custom {
+  background: linear-gradient(135deg, #b794f6 0%, #a78bfa 100%);
+  border-color: transparent;
+}
+
+.demo-checkbox-input:checked + .demo-custom::after {
+  border-left-color: white;
+  border-bottom-color: white;
+  transform: rotate(-45deg) scale(1);
+}
+
+
+
+/* Texte du label en blanc */
+.demo-label {
+  color: #ffffff;
+}
 </style>
-
