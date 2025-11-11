@@ -5,8 +5,10 @@ const router = createRouter({
   routes:[
       {
           path: '/',
-          name: 'julia',
+          name: 'home',
             component: () => import('@/views/JuliaFractalView.vue'),
+          props: { demo: true },
+
       },
     {
       path: '/julia',

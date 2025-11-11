@@ -144,6 +144,20 @@ onUnmounted(() => {
   }
 });
 
+const props = defineProps({
+  demo : {
+    type: Boolean,
+    default: false
+  }
+});
+
+if (props.demo) {
+  demoMode.value = true;
+  startTime = null;
+  animationId = requestAnimationFrame(updateDemo);
+}
+
+
 const juliaShader = computed(() => `
 precision highp float;
 uniform vec2 u_resolution;
@@ -152,7 +166,7 @@ uniform float u_zoom;
 vec2 c = vec2(${r.value}, ${i.value});
 const float maxLimit = 4.0;
 const int MAX_ITER = 2000;
-int dynamicMaxIterations  = int(800.0 + 60.0 * log(u_zoom + 1.0));
+int dynamicMaxIterations  = int(400.0 + 200.0 * log(u_zoom + 1.0));
 
 
 vec2 multiplyComplex(vec2 a, vec2 b){
