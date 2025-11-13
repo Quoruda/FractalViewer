@@ -32,17 +32,37 @@ defineProps({
       gl_FragColor = vec4(uv, 0.5 + 0.5 * sin(uv.x * 10.0), 1.0);
     }
     `
+  },
+  fragmentShaderWGSL: {
+    type: String,
+    required: false,
+    default: null
+  },
+
+  customUniforms: {
+    type: Object,
+    default: () => ({})
   }
 })
 
 </script>
 
 <template>
-  <WebGLShader class="fullscreen-shader"
+  <WebGLShader class="fullscreen-shader" v-if="fragmentShaderWGSL != null"
       :width="width"
       :height="height"
       :fragmentShader="fragmentShader"
+      :wgslFragmentShader="fragmentShaderWGSL"
+      :customUniforms="customUniforms"
   />
+  <WebGLShader class="fullscreen-shader" v-else
+      :width="width"
+      :height="height"
+      :fragmentShader="fragmentShader"
+      :custom-uniforms="customUniforms"
+  />
+
+
 
   <div class="layout-container">
     <slot>

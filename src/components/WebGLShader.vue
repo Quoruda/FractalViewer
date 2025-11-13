@@ -1,14 +1,29 @@
 <template>
   <div class="shader-container">
+
     <canvas ref="canvas" :width="width" :height="height"></canvas>
+
+    <!-- Messages d'erreur -->
     <div v-if="error" class="error">{{ error }}</div>
+
+    <!-- Warnings (non bloquants) -->
+    <div v-if="warnings.length  && showWarning > 0" class="warnings">
+      <div v-for="(warning, i) in warnings" :key="i">⚠️ {{ warning }}</div>
+    </div>
+
+    <!-- Info renderer -->
+    <div v-if="showRendererInfo && currentRenderer" class="renderer-info">
+      🎨 {{ currentRenderer.toUpperCase() }}
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, watch } from 'vue';
+import { ref, onMounted, onBeforeUnmount, watch, computed } from 'vue';
+import { RendererFactory } from './rendererFactory.js';
 
 const props = defineProps({
+  // Shaders GLSL (WebGL)
   vertexShader: {
     type: String,
     default: `
@@ -29,23 +44,18 @@ const props = defineProps({
 
       void main() {
         float aspect = u_resolution.x / u_resolution.y;
-        vec2 uv = (gl_FragCoord.xy / u_resolution) * u_zoom + u_offset;
+        vec2 uv = (gl_FragCoord.xy / u_resolution) / u_zoom + u_offset;
         uv = uv * vec2(aspect, 1.0);
 
-        // Grille
         vec2 grid = fract(uv * 10.0);
         float line = step(0.95, grid.x) + step(0.95, grid.y);
 
-        // Cercles animés
         vec2 center = floor(uv * 10.0) + 0.5;
         center = center / 10.0;
         float dist = length(uv - center);
         float circle = smoothstep(0.05, 0.04, dist);
 
-        // Couleur basée sur la position
         vec3 color = vec3(fract(center.x), fract(center.y), sin(u_time + center.x + center.y) * 0.5 + 0.5);
-
-        // Combinaison
         color = mix(vec3(0.1), color, circle);
         color = mix(color, vec3(1.0), line * 0.5);
 
@@ -53,6 +63,23 @@ const props = defineProps({
       }
     `
   },
+
+  showWarning: {
+    type: Boolean,
+    default: false
+  },
+
+  // Shaders WGSL (WebGPU) - optionnels
+  wgslVertexShader: {
+    type: String,
+    default: null
+  },
+  wgslFragmentShader: {
+    type: String,
+    default: null
+  },
+
+  // Dimensions
   width: {
     type: Number,
     default: 800
@@ -60,143 +87,129 @@ const props = defineProps({
   height: {
     type: Number,
     default: 600
+  },
+
+  // Choix du renderer
+  renderer: {
+    type: String,
+    default: 'auto',
+    validator: (value) => ['auto', 'webgl', 'webgpu'].includes(value)
+  },
+
+  // Afficher les infos de renderer
+  showRendererInfo: {
+    type: Boolean,
+    default: false
+  },
+
+
+  customUniforms: {
+    type: Object,
+    default: () => ({})
   }
 });
 
 const canvas = ref(null);
 const error = ref('');
-let gl = null;
-let program = null;
+const warnings = ref([]);
+const currentRenderer = ref(null);
+
+let renderer = null;
 let animationId = null;
 let startTime = Date.now();
 
-// Variables pour le déplacement
+// Interactions
 const offset = ref({ x: 0, y: 0 });
+const zoom = ref(1.0);
 let isDragging = false;
 let lastMousePos = { x: 0, y: 0 };
-const zoom = ref(1.0);
-
-// Variables pour le tactile
 let lastTouchDistance = 0;
 let lastTouchCenter = { x: 0, y: 0 };
 
-// Cache des uniform locations
-let uniformLocations = {};
+// Computed
+const hasWGSL = computed(() => {
+  return !!(props.wgslFragmentShader || props.wgslVertexShader);
+});
 
-function createShader(gl, type, source) {
-  const shader = gl.createShader(type);
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    const info = gl.getShaderInfoLog(shader);
-    gl.deleteShader(shader);
-    throw new Error(`Erreur compilation shader: ${info}`);
-  }
-
-  return shader;
-}
-
-function createProgram(gl, vertexShader, fragmentShader) {
-  const program = gl.createProgram();
-  gl.attachShader(program, vertexShader);
-  gl.attachShader(program, fragmentShader);
-  gl.linkProgram(program);
-
-  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-    const info = gl.getProgramInfoLog(program);
-    gl.deleteProgram(program);
-    throw new Error(`Erreur link program: ${info}`);
-  }
-
-  return program;
-}
-
-function initWebGL() {
+async function initRenderer() {
   error.value = '';
+  warnings.value = [];
 
   try {
-    gl = canvas.value.getContext('webgl') || canvas.value.getContext('experimental-webgl');
+    // Créer le renderer approprié
+    const result = await RendererFactory.create(canvas.value, {
+      preferredRenderer: props.renderer,
+      hasWGSL: hasWGSL.value,
+      // NOUVEAU: Passer les shaders pour validation précoce
+      wgslVertex: props.wgslVertexShader,
+      wgslFragment: props.wgslFragmentShader
+    });
 
-    if (!gl) {
-      throw new Error('WebGL non supporté');
+    renderer = result.renderer;
+    warnings.value = result.warnings;
+    currentRenderer.value = result.selectedType; // CORRECTION: Utiliser selectedType au lieu de getType()
+
+    // Préparer les shaders selon le type
+    const shaders = currentRenderer.value === 'webgpu'
+        ? {
+          vertex: props.wgslVertexShader,
+          fragment: props.wgslFragmentShader
+        }
+        : {
+          vertex: props.vertexShader,
+          fragment: props.fragmentShader
+        };
+
+    // Initialiser seulement si pas déjà fait dans le factory
+    if (currentRenderer.value === 'webgl') {
+      await renderer.initialize(shaders);
     }
-
-    const vertShader = createShader(gl, gl.VERTEX_SHADER, props.vertexShader);
-    const fragShader = createShader(gl, gl.FRAGMENT_SHADER, props.fragmentShader);
-    program = createProgram(gl, vertShader, fragShader);
-
-    // Cleanup des shaders après linking
-    gl.deleteShader(vertShader);
-    gl.deleteShader(fragShader);
-
-    // Buffer pour un rectangle plein écran
-    const positions = new Float32Array([
-      -1, -1,
-      1, -1,
-      -1,  1,
-      1,  1,
-    ]);
-
-    const positionBuffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
-
-    const positionLocation = gl.getAttribLocation(program, 'a_position');
-    gl.enableVertexAttribArray(positionLocation);
-    gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-
-    gl.useProgram(program);
-
-    // Cache des uniform locations
-    uniformLocations = {
-      resolution: gl.getUniformLocation(program, 'u_resolution'),
-      time: gl.getUniformLocation(program, 'u_time'),
-      offset: gl.getUniformLocation(program, 'u_offset'),
-      zoom: gl.getUniformLocation(program, 'u_zoom')
-    };
 
     // Démarrer l'animation
     render();
 
   } catch (e) {
-    error.value = e.message;
-    console.error(e);
+    error.value = `Erreur d'initialisation: ${e.message}`;
+    console.error('Renderer initialization failed:', e);
+
+    // NOUVEAU: Dernier recours - forcer WebGL basique
+    if (currentRenderer.value !== 'webgl' && !renderer) {
+      try {
+        console.warn('Tentative de fallback WebGL de secours...');
+        renderer = new (await import('./WebGLRenderer.js')).WebGLRenderer(canvas.value);
+        await renderer.initialize({
+          vertex: props.vertexShader,
+          fragment: props.fragmentShader
+        });
+        currentRenderer.value = 'webgl';
+        warnings.value.push('Fallback vers WebGL de secours');
+        error.value = '';
+        render();
+      } catch (fallbackError) {
+        error.value = `Impossible d'initialiser un renderer: ${fallbackError.message}`;
+      }
+    }
   }
 }
 
 function render() {
-  if (!gl || !program) return;
+  if (!renderer) return;
 
   const time = (Date.now() - startTime) / 1000;
 
-  // Uniforms avec locations en cache
-  if (uniformLocations.resolution) {
-    gl.uniform2f(uniformLocations.resolution, props.width, props.height);
-  }
+  renderer.setUniforms({
+    resolution: { x: props.width, y: props.height },
+    time: time,
+    offset: offset.value,
+    zoom: zoom.value,
+    ...props.customUniforms
+  });
 
-  if (uniformLocations.time) {
-    gl.uniform1f(uniformLocations.time, time);
-  }
-
-  if (uniformLocations.offset) {
-    gl.uniform2f(uniformLocations.offset, offset.value.x, offset.value.y);
-  }
-
-  if (uniformLocations.zoom) {
-    gl.uniform1f(uniformLocations.zoom, zoom.value);
-  }
-
-  gl.viewport(0, 0, props.width, props.height);
-  gl.clearColor(0, 0, 0, 1);
-  gl.clear(gl.COLOR_BUFFER_BIT);
-
-  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-
+  renderer.render();
   animationId = requestAnimationFrame(render);
 }
 
-// Fonctions utilitaires pour le tactile
+// Fonctions tactiles
 function getTouchDistance(touches) {
   const dx = touches[0].clientX - touches[1].clientX;
   const dy = touches[0].clientY - touches[1].clientY;
@@ -210,12 +223,12 @@ function getTouchCenter(touches) {
   };
 }
 
-onMounted(() => {
-  initWebGL();
+onMounted(async () => {
+  await initRenderer();
 
   const canvasEl = canvas.value;
 
-  // Événements souris pour le déplacement
+  // Événements souris
   canvasEl.addEventListener('mousedown', (e) => {
     isDragging = true;
     lastMousePos = { x: e.clientX, y: e.clientY };
@@ -244,7 +257,7 @@ onMounted(() => {
     canvasEl.style.cursor = 'grab';
   });
 
-  // Zoom avec la molette
+  // Zoom molette
   canvasEl.addEventListener('wheel', (e) => {
     e.preventDefault();
 
@@ -264,20 +277,17 @@ onMounted(() => {
     zoom.value = newZoom;
   });
 
-  // ===== ÉVÉNEMENTS TACTILES =====
-
+  // Événements tactiles
   canvasEl.addEventListener('touchstart', (e) => {
     e.preventDefault();
 
     if (e.touches.length === 1) {
-      // Un doigt : déplacement
       isDragging = true;
       lastMousePos = {
         x: e.touches[0].clientX,
         y: e.touches[0].clientY
       };
     } else if (e.touches.length === 2) {
-      // Deux doigts : zoom
       isDragging = false;
       lastTouchDistance = getTouchDistance(e.touches);
       lastTouchCenter = getTouchCenter(e.touches);
@@ -288,7 +298,6 @@ onMounted(() => {
     e.preventDefault();
 
     if (e.touches.length === 1 && isDragging) {
-      // Déplacement avec un doigt
       const touch = e.touches[0];
       const deltaX = (touch.clientX - lastMousePos.x) / props.width;
       const deltaY = (touch.clientY - lastMousePos.y) / props.height;
@@ -298,32 +307,25 @@ onMounted(() => {
 
       lastMousePos = { x: touch.clientX, y: touch.clientY };
     } else if (e.touches.length === 2) {
-      // Pinch-to-zoom avec deux doigts
       const currentDistance = getTouchDistance(e.touches);
       const currentCenter = getTouchCenter(e.touches);
 
-      // Calculer le facteur de zoom
       const zoomFactor = currentDistance / lastTouchDistance;
 
-      // Position du centre en coordonnées normalisées
       const rect = canvasEl.getBoundingClientRect();
       const centerX = (currentCenter.x - rect.left) / props.width;
       const centerY = 1.0 - (currentCenter.y - rect.top) / props.height;
 
-      // Position dans l'espace monde avant le zoom
       const worldX = centerX / zoom.value + offset.value.x;
       const worldY = centerY / zoom.value + offset.value.y;
 
-      // Appliquer le zoom
       const newZoom = zoom.value * zoomFactor;
 
-      // Ajuster l'offset pour garder le point central fixe
       offset.value.x = worldX - centerX / newZoom;
       offset.value.y = worldY - centerY / newZoom;
 
       zoom.value = newZoom;
 
-      // Déplacement du centre pendant le pinch
       const centerDeltaX = (currentCenter.x - lastTouchCenter.x) / props.width;
       const centerDeltaY = (currentCenter.y - lastTouchCenter.y) / props.height;
 
@@ -341,7 +343,6 @@ onMounted(() => {
     if (e.touches.length === 0) {
       isDragging = false;
     } else if (e.touches.length === 1) {
-      // Retour au mode déplacement avec un seul doigt
       isDragging = true;
       lastMousePos = {
         x: e.touches[0].clientX,
@@ -356,7 +357,7 @@ onMounted(() => {
   }, { passive: false });
 
   canvasEl.style.cursor = 'grab';
-  canvasEl.style.touchAction = 'none'; // Désactiver les gestes natifs du navigateur
+  canvasEl.style.touchAction = 'none';
 });
 
 onBeforeUnmount(() => {
@@ -364,30 +365,38 @@ onBeforeUnmount(() => {
     cancelAnimationFrame(animationId);
   }
 
-  // Cleanup WebGL resources
-  if (gl && program) {
-    gl.deleteProgram(program);
+  if (renderer) {
+    renderer.dispose();
+    renderer = null;
   }
 });
 
-watch(() => [props.vertexShader, props.fragmentShader], () => {
+watch(() => [props.vertexShader, props.fragmentShader, props.wgslVertexShader, props.wgslFragmentShader, props.renderer], async () => {
   if (animationId) {
     cancelAnimationFrame(animationId);
   }
+
+  if (renderer) {
+    renderer.dispose();
+    renderer = null;
+  }
+
   startTime = Date.now();
-  initWebGL();
+  await initRenderer();
 });
 </script>
 
 <style scoped>
+.shader-container {
+  position: relative;
+}
+
 canvas {
   display: block;
   border: 1px solid #333;
-  touch-action: none; /* Désactiver les gestes natifs */
-  user-select: none; /* Empêcher la sélection de texte */
+  touch-action: none;
+  user-select: none;
   -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
 }
 
 .error {
@@ -395,12 +404,45 @@ canvas {
   top: 10px;
   left: 10px;
   right: 10px;
-  background: rgba(255, 0, 0, 0.8);
+  background: rgba(255, 0, 0, 0.9);
   color: white;
-  padding: 10px;
-  border-radius: 4px;
+  padding: 12px;
+  border-radius: 6px;
   font-family: monospace;
   font-size: 12px;
   white-space: pre-wrap;
+  z-index: 100;
+}
+
+.warnings {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  background: rgba(255, 165, 0, 0.9);
+  color: white;
+  padding: 10px;
+  border-radius: 6px;
+  font-family: sans-serif;
+  font-size: 12px;
+  z-index: 99;
+}
+
+.warnings > div {
+  margin: 4px 0;
+}
+
+.renderer-info {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #0f0;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: bold;
+  z-index: 98;
 }
 </style>

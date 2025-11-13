@@ -163,7 +163,9 @@ precision highp float;
 uniform vec2 u_resolution;
 uniform vec2 u_offset;
 uniform float u_zoom;
-vec2 c = vec2(${r.value}, ${i.value});
+uniform float u_i;
+uniform float u_r;
+vec2 c = vec2(u_r, u_i);
 const float maxLimit = 4.0;
 const int MAX_ITER = 2000;
 int dynamicMaxIterations  = int(400.0 + 200.0 * log(u_zoom + 1.0));
@@ -221,7 +223,7 @@ void main(){
 </script>
 
 <template>
-  <FullScreenShader :fragmentShader="juliaShader">
+  <FullScreenShader :fragmentShader="juliaShader" :custom-uniforms="{ r: r, i:i }">
     <RangeSlider
         v-model="r"
         :min="-2"
