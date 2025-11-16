@@ -1,13 +1,12 @@
 <template>
   <div class="shader-container">
-
     <canvas ref="canvas" :width="width" :height="height"></canvas>
 
     <!-- Messages d'erreur -->
     <div v-if="error" class="error">{{ error }}</div>
 
     <!-- Warnings (non bloquants) -->
-    <div v-if="warnings.length  && showWarning > 0" class="warnings">
+    <div v-if="warnings.length && showWarning > 0" class="warnings">
       <div v-for="(warning, i) in warnings" :key="i">⚠️ {{ warning }}</div>
     </div>
 
@@ -102,10 +101,14 @@ const props = defineProps({
     default: false
   },
 
-
   customUniforms: {
     type: Object,
     default: () => ({})
+  },
+
+  zoomImpactOnOffset: {
+    type: Boolean,
+    default: true
   }
 });
 
@@ -136,20 +139,17 @@ async function initRenderer() {
   warnings.value = [];
 
   try {
-    // Créer le renderer approprié
     const result = await RendererFactory.create(canvas.value, {
       preferredRenderer: props.renderer,
       hasWGSL: hasWGSL.value,
-      // NOUVEAU: Passer les shaders pour validation précoce
       wgslVertex: props.wgslVertexShader,
       wgslFragment: props.wgslFragmentShader
     });
 
     renderer = result.renderer;
     warnings.value = result.warnings;
-    currentRenderer.value = result.selectedType; // CORRECTION: Utiliser selectedType au lieu de getType()
+    currentRenderer.value = result.selectedType;
 
-    // Préparer les shaders selon le type
     const shaders = currentRenderer.value === 'webgpu'
         ? {
           vertex: props.wgslVertexShader,
@@ -160,19 +160,16 @@ async function initRenderer() {
           fragment: props.fragmentShader
         };
 
-    // Initialiser seulement si pas déjà fait dans le factory
     if (currentRenderer.value === 'webgl') {
       await renderer.initialize(shaders);
     }
 
-    // Démarrer l'animation
     render();
 
   } catch (e) {
     error.value = `Erreur d'initialisation: ${e.message}`;
     console.error('Renderer initialization failed:', e);
 
-    // NOUVEAU: Dernier recours - forcer WebGL basique
     if (currentRenderer.value !== 'webgl' && !renderer) {
       try {
         console.warn('Tentative de fallback WebGL de secours...');
@@ -206,6 +203,7 @@ function render() {
   });
 
   renderer.render();
+  console.log(props.zoomImpactOnOffset)
   animationId = requestAnimationFrame(render);
 }
 
@@ -221,6 +219,11 @@ function getTouchCenter(touches) {
     x: (touches[0].clientX + touches[1].clientX) / 2,
     y: (touches[0].clientY + touches[1].clientY) / 2
   };
+}
+
+// Fonction helper pour calculer le diviseur d'offset selon zoomImpactOnOffset
+function getOffsetDivisor() {
+  return props.zoomImpactOnOffset ? zoom.value : 1.0;
 }
 
 onMounted(async () => {
@@ -241,8 +244,9 @@ onMounted(async () => {
     const deltaX = (e.clientX - lastMousePos.x) / props.width;
     const deltaY = (e.clientY - lastMousePos.y) / props.height;
 
-    offset.value.x -= deltaX / zoom.value;
-    offset.value.y += deltaY / zoom.value;
+    const divisor = getOffsetDivisor();
+    offset.value.x -= deltaX / divisor;
+    offset.value.y += deltaY / divisor;
 
     lastMousePos = { x: e.clientX, y: e.clientY };
   });
@@ -265,14 +269,18 @@ onMounted(async () => {
     const mouseX = (e.clientX - rect.left) / props.width;
     const mouseY = 1.0 - (e.clientY - rect.top) / props.height;
 
-    const worldX = mouseX / zoom.value + offset.value.x;
-    const worldY = mouseY / zoom.value + offset.value.y;
-
     const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
     const newZoom = zoom.value * zoomFactor;
 
-    offset.value.x = worldX - mouseX / newZoom;
-    offset.value.y = worldY - mouseY / newZoom;
+    if (props.zoomImpactOnOffset) {
+      // Mode classique : zoom influence l'offset (zoom vers la souris)
+      const worldX = mouseX / zoom.value + offset.value.x;
+      const worldY = mouseY / zoom.value + offset.value.y;
+
+      offset.value.x = worldX - mouseX / newZoom;
+      offset.value.y = worldY - mouseY / newZoom;
+    }
+    // Si zoomImpactOnOffset est false, on change juste le zoom sans toucher à l'offset
 
     zoom.value = newZoom;
   });
@@ -302,8 +310,9 @@ onMounted(async () => {
       const deltaX = (touch.clientX - lastMousePos.x) / props.width;
       const deltaY = (touch.clientY - lastMousePos.y) / props.height;
 
-      offset.value.x -= deltaX / zoom.value;
-      offset.value.y += deltaY / zoom.value;
+      const divisor = getOffsetDivisor();
+      offset.value.x -= deltaX / divisor;
+      offset.value.y += deltaY / divisor;
 
       lastMousePos = { x: touch.clientX, y: touch.clientY };
     } else if (e.touches.length === 2) {
@@ -311,26 +320,36 @@ onMounted(async () => {
       const currentCenter = getTouchCenter(e.touches);
 
       const zoomFactor = currentDistance / lastTouchDistance;
-
-      const rect = canvasEl.getBoundingClientRect();
-      const centerX = (currentCenter.x - rect.left) / props.width;
-      const centerY = 1.0 - (currentCenter.y - rect.top) / props.height;
-
-      const worldX = centerX / zoom.value + offset.value.x;
-      const worldY = centerY / zoom.value + offset.value.y;
-
       const newZoom = zoom.value * zoomFactor;
 
-      offset.value.x = worldX - centerX / newZoom;
-      offset.value.y = worldY - centerY / newZoom;
+      if (props.zoomImpactOnOffset) {
+        // Mode classique : zoom influence l'offset
+        const rect = canvasEl.getBoundingClientRect();
+        const centerX = (currentCenter.x - rect.left) / props.width;
+        const centerY = 1.0 - (currentCenter.y - rect.top) / props.height;
+
+        const worldX = centerX / zoom.value + offset.value.x;
+        const worldY = centerY / zoom.value + offset.value.y;
+
+        offset.value.x = worldX - centerX / newZoom;
+        offset.value.y = worldY - centerY / newZoom;
+
+        // Pan avec le centre du pincement
+        const centerDeltaX = (currentCenter.x - lastTouchCenter.x) / props.width;
+        const centerDeltaY = (currentCenter.y - lastTouchCenter.y) / props.height;
+
+        offset.value.x -= centerDeltaX / newZoom;
+        offset.value.y += centerDeltaY / newZoom;
+      } else {
+        // Mode sans impact : on applique quand même le pan du centre
+        const centerDeltaX = (currentCenter.x - lastTouchCenter.x) / props.width;
+        const centerDeltaY = (currentCenter.y - lastTouchCenter.y) / props.height;
+
+        offset.value.x -= centerDeltaX;
+        offset.value.y += centerDeltaY;
+      }
 
       zoom.value = newZoom;
-
-      const centerDeltaX = (currentCenter.x - lastTouchCenter.x) / props.width;
-      const centerDeltaY = (currentCenter.y - lastTouchCenter.y) / props.height;
-
-      offset.value.x -= centerDeltaX / zoom.value;
-      offset.value.y += centerDeltaY / zoom.value;
 
       lastTouchDistance = currentDistance;
       lastTouchCenter = currentCenter;

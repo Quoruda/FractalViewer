@@ -42,6 +42,11 @@ defineProps({
   customUniforms: {
     type: Object,
     default: () => ({})
+  },
+
+  zoomImpactOnOffset: {
+    type: Boolean,
+    default: true
   }
 })
 
@@ -54,12 +59,14 @@ defineProps({
       :fragmentShader="fragmentShader"
       :wgslFragmentShader="fragmentShaderWGSL"
       :customUniforms="customUniforms"
+      :zoomImpactOnOffset="zoomImpactOnOffset"
   />
   <WebGLShader class="fullscreen-shader" v-else
       :width="width"
       :height="height"
       :fragmentShader="fragmentShader"
       :custom-uniforms="customUniforms"
+      :zoom-impact-on-offset="zoomImpactOnOffset"
   />
 
 
