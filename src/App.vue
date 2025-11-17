@@ -8,6 +8,7 @@ const links = [
   { name: 'Julia Fractal', path: '/julia' },
   { name: 'Mandelbrot Fractal', path: '/mandelbrot' },
   { name: 'Burning Ship', path: '/burningship' },
+  { name: 'Mandelbox (3D)', path: '/mandelbox' },
 ]
 </script>
 
