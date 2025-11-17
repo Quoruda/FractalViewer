@@ -1,9 +1,9 @@
-import{F as o}from"./FullScreenShader-zdvPIgFQ.js";import{g as e,o as t}from"./index-CjwQT9DZ.js";const a=`
+import{F as o}from"./FullScreenShader-DgaGeG_r.js";import{a as e,d as a}from"./index-OAAX1uwx.js";const t=`
 precision highp float;
 uniform vec2 u_resolution;
 uniform vec2 u_offset;
 uniform float u_zoom;
-const int MAX_ITER = 800;
+const int MAX_ITER = 1500;
 float maxLimit = 4.0;
 
 vec2 multiplyComplex(vec2 a, vec2 b){
@@ -17,7 +17,7 @@ float magnitudeSquared(vec2 v){
 void main(){
   vec2 uv = (gl_FragCoord.xy / u_resolution ) / u_zoom + u_offset;
   float aspect = u_resolution.x / u_resolution.y;
-  vec2 z = vec2(0.0, 0.0);
+  vec2 z;
   vec2 c = (uv * 4.0 - vec2(2.0, 2.0)) * vec2(aspect, 1.0);
 
   float magnitude;
@@ -41,4 +41,4 @@ void main(){
     }
   }
 }
-`,n={__name:"MandelbrotFractalView",setup(r){return(l,c)=>(t(),e(o,{fragmentShader:a}))}};export{n as default};
+`,n={__name:"MandelbrotFractalView",setup(r){return(l,c)=>(a(),e(o,{fragmentShader:t}))}};export{n as default};

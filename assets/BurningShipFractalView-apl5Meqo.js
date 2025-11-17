@@ -1,4 +1,4 @@
-import{F as e}from"./FullScreenShader-zdvPIgFQ.js";import{c as a,g as t,o as i}from"./index-CjwQT9DZ.js";const m={__name:"BurningShipFractalView",setup(r){const o=a(()=>`
+import{F as e}from"./FullScreenShader-DgaGeG_r.js";import{c as a,a as t,d as i}from"./index-OAAX1uwx.js";const m={__name:"BurningShipFractalView",setup(r){const o=a(()=>`
 precision highp float;
 uniform vec2 u_resolution;
 uniform vec2 u_offset;
