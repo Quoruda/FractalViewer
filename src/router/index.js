@@ -24,7 +24,12 @@ const router = createRouter({
         path: '/burningship',
         name: 'burningship',
         component: () => import('@/views/BurningShipFractalView.vue'),
-    }
+    },
+      {
+          path: '/mandelbox',
+            name: 'mandelbox',
+            component: () => import('@/views/MandelBoxFractalView.vue'),
+      }
   ],
 })
 
