@@ -10,8 +10,7 @@ precision highp float;
 uniform vec2 u_resolution;
 uniform vec2 u_offset;
 uniform float u_zoom;
-int dynamicMaxIterations  = int(300.0 + 60.0 * log(u_zoom + 1.0));
-const int MAX_ITER = 800;
+const int MAX_ITER  = 600;
 
 const float maxLimit = 256.0;
 const int maxIterations = 800;
@@ -34,7 +33,6 @@ void main(){
   gl_FragColor = vec4(0.05, 0.02, 0.1, 1.0);
 
   for(int i = 0; i < MAX_ITER; i++){
-    if (i >= dynamicMaxIterations) break;
     z = multiplyComplex(z, z) + c;
     z.y = abs(z.y); // Burning Ship modification
     z.x = abs(z.x); // Burning Ship modification
@@ -43,7 +41,7 @@ void main(){
       vec3 coldColor = vec3(0.85, 0.35, 0.05);
       vec3 warmColor = vec3(1.0, 0.85, 0.4);
 
-      float t = float(i) / float(dynamicMaxIterations);
+      float t = float(i) / float(MAX_ITER);
       t = 0.5 + 0.5 * sin(6.2831 * t * 1.5);  // Crée des oscillations subtiles
       vec3 color = mix(coldColor, warmColor, t);
 

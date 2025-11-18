@@ -167,8 +167,7 @@ uniform float u_i;
 uniform float u_r;
 vec2 c = vec2(u_r, u_i);
 const float maxLimit = 4.0;
-const int MAX_ITER = 2000;
-int dynamicMaxIterations  = int(400.0 + 200.0 * log(u_zoom + 1.0));
+const int MAX_ITER = 600;
 
 
 vec2 multiplyComplex(vec2 a, vec2 b){
@@ -195,16 +194,15 @@ void main(){
   gl_FragColor = vec4(0.0, 0.0, 0.0 , 1.0);
 
   for(int i = 0; i < MAX_ITER; i++){
-    if (i >= dynamicMaxIterations) break;
     z = multiplyComplex(z, z) + c;
     magnitude = magnitudeSquared(z);
     if(magnitude > maxLimit){
-      float t = float(i) / float(dynamicMaxIterations);
+      float t = float(i) / float(MAX_ITER);
 
       // Lissage pour des transitions plus douces
       float log_zn = log(magnitude) / 2.0;
       float nu = log(log_zn / log(2.0)) / log(2.0);
-      t = (float(i) + 1.0 - nu) / float(dynamicMaxIterations);
+      t = (float(i) + 1.0 - nu) / float(MAX_ITER);
 
       // Créer un dégradé de couleurs harmonieux
       float hue = fract(t * 2.0);
