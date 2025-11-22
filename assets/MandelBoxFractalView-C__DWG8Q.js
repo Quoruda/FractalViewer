@@ -1,4 +1,4 @@
-import{F as s}from"./FullScreenShader-DgaGeG_r.js";import{R as l}from"./RangeSlider-IOBid2nZ.js";import{r,c as n,a as f,b as d,d as m,h as p,e as i}from"./index-OAAX1uwx.js";const h={__name:"MandelBoxFractalView",setup(u){const e=r(-3),a=r(1),c=n(()=>`
+import{F as s}from"./FullScreenShader-Cu2pJoy1.js";import{R as l}from"./RangeSlider-BVPQtG7b.js";import{r,c as n,a as f,b as d,d as m,h as p,e as i}from"./index-BhkfGwnb.js";const h={__name:"MandelBoxFractalView",setup(u){const e=r(-3),a=r(1),c=n(()=>`
 precision highp float;
 
 uniform vec2 u_resolution;
@@ -13,7 +13,7 @@ const float MIN_RADIUS2 = 0.25;   // rayon min²
 const float FIXED_RADIUS2 = 1.0;  // rayon fixe²
 const int MAX_ITER = 14;
 const float EPSILON = 0.0005;
-const int MAX_STEPS = 140;
+const int MAX_STEPS = 100;
 const float SURFACE_DIST = 0.0005;
 
 //------------------------------------------------------
