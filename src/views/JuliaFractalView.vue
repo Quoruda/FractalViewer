@@ -13,35 +13,32 @@ let startTime = null;
 
 // Collection de paramètres Julia intéressants
 const interestingJuliaSets = [
-  // Classiques célèbres
+  // Classiques célèbres - dendrites et structures principales
   { r: -0.7269, i: 0.1889 },      // Dendrite de Douady
   { r: -0.8, i: 0.156 },          // Dragon de Douady
   { r: -0.162, i: 1.04 },         // Lapin de Douady
   { r: -0.12, i: 0.74 },          // San Marco fractal
   { r: -0.391, i: -0.587 },       // Siegel disk
 
-  // Spirales
+  // Spirales - région positive
   { r: 0.285, i: 0.01 },          // Spirale simple
   { r: 0.45, i: 0.1428 },         // Spirale complexe
   { r: -0.70176, i: -0.3842 },    // Spirale de Douady
 
-  // Formes florales
+  // Formes florales - bien espacées
   { r: -0.4, i: 0.6 },            // Fleur à 5 pétales
   { r: 0.3, i: 0.5 },             // Branches florales
   { r: -0.54, i: 0.54 },          // Fleur diagonale
-  { r: 0.355, i: 0.355 },         // Fleur symétrique
   { r: -0.1, i: 0.651 },          // Fleur de corail
 
   // Formes géométriques
   { r: 0.4, i: 0.2 },             // Feuille
   { r: -0.7, i: 0.27015 },        // Forme connectée
-  { r: 0.285, i: 0.0 },           // Croix parfaite
   { r: -0.835, i: -0.2321 },      // Triangle
   { r: -0.8, i: 0.0 },            // Forme en H
 
   // Formes organiques
   { r: -0.79, i: 0.15 },          // Ver
-  { r: -0.162, i: 1.04 },         // Lapin
   { r: 0.0, i: 0.8 },             // Arbre
   { r: -0.4, i: -0.59 },          // Salamandre
   { r: -1.476, i: 0.0 },          // Étoile de mer
@@ -51,11 +48,9 @@ const interestingJuliaSets = [
   { r: -0.038088, i: 0.9754633 }, // Plume
   { r: -0.11, i: 0.6557 },        // Toile d'araignée
   { r: -0.194, i: 0.6557 },       // Cristal de glace
-  { r: 0.3, i: -0.01 },           // Étoile à branches
 
-  // Points sur le bord
+  // Points sur le bord du chaos
   { r: -0.75, i: 0.11 },          // Presque dragon
-  { r: -0.70176, i: 0.3842 },     // Spirale inversée
   { r: 0.28, i: 0.008 },          // Spirale fine
   { r: -0.481762, i: -0.531657 }, // Constellation
 
@@ -65,24 +60,23 @@ const interestingJuliaSets = [
   { r: 0.32, i: 0.043 },          // Double spirale
   { r: -0.618, i: 0.0 },          // Nombre d'or
 
-  // Formes chaotiques intéressantes
+  // Chaos intéressant
   { r: -0.4, i: -0.6 },           // Chaos contrôlé
   { r: 0.34, i: -0.05 },          // Turbulence
   { r: -0.123, i: 0.745 },        // Fractale de Fatou
-  { r: -0.1, i: -0.8 },           // Éclair
 
-  // Formes rares
+  // Formes rares et distinctes
   { r: -1.25, i: 0.0 },           // Grande étoile
   { r: 0.0, i: -0.8 },            // Arbre inversé
   { r: -0.75, i: 0.0 },           // Croix de Malte
   { r: 0.28, i: -0.53 },          // Hélice
-  { r: -0.221, i: -0.713 },       // Tourbillon
 
-  // Ensembles presque-circulaires
+  // Ensembles circulaires
   { r: -0.12256, i: 0.74486 },    // Presque cercle
   { r: -0.7, i: 0.3 },            // Ovale
   { r: 0.28, i: 0.53 },           // Lentille
 ];
+
 
 const updateDemo = (timestamp) => {
   if (!startTime) startTime = timestamp;
