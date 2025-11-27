@@ -130,7 +130,7 @@ void main() {
 
     // Rotations caméra
     float yaw = u_offset.x * 3.14159;
-    float pitch = u_offset.y * 1.57;
+    float pitch = -u_offset.y * 1.57;
 
     vec3 forward = normalize(vec3(
         sin(yaw) * cos(pitch),
