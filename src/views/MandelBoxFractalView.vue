@@ -18,13 +18,13 @@ uniform float u_time;
 uniform float u_scale;
 uniform float u_foldLimit;
 
-const float MAX_DISTANCE = 17.0;
-const float MIN_RADIUS2 = 0.25;   // rayon min²
-const float FIXED_RADIUS2 = 1.0;  // rayon fixe²
-const int MAX_ITER = 14;
-const float EPSILON = 0.0005;
-const int MAX_STEPS = 100;
-const float SURFACE_DIST = 0.0005;
+const float MAX_DISTANCE = 12.0;
+const float MIN_RADIUS2 = 0.25;
+const float FIXED_RADIUS2 = 1.0;
+const int MAX_ITER = 10;
+const float EPSILON = 0.001;
+const int MAX_STEPS = 64;
+const float SURFACE_DIST = 0.001;
 
 //------------------------------------------------------
 // Box folding
@@ -111,7 +111,7 @@ vec3 get_normal(vec3 p) {
 float calcAO(vec3 pos, vec3 normal) {
     float ao = 0.0;
     float scale = 1.0;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 3; i++) {  // réduit de 5 à 3 pour meilleures perfs
         float hr = 0.01 + 0.02 * float(i);
         vec3 aopos = normal * hr + pos;
         float dd = SDF(aopos);
