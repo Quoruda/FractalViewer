@@ -154,7 +154,7 @@ void main() {
     // Position caméra
     vec3 base_pos = vec3(0.0, 0.0, 3.5);
     float travel = t * 0.08;
-    vec3 camera_pos = base_pos + vec3(0.0, 0.0, -travel);
+    vec3 camera_pos = base_pos + vec3(0.0, 0.0, -travel) *0.0;
 
     // Rotations caméra
     float yaw = u_offset.x * 3.14159;
