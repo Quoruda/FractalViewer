@@ -1,4 +1,4 @@
-import{F as s}from"./FullScreenShader-Cu2pJoy1.js";import{R as l}from"./RangeSlider-BVPQtG7b.js";import{r,c as n,a as f,b as d,d as m,h as p,e as i}from"./index-BhkfGwnb.js";const h={__name:"MandelBoxFractalView",setup(u){const e=r(-3),a=r(1),c=n(()=>`
+import{F as c}from"./FullScreenShader-uZ4b5job.js";import{R as r}from"./RangeSlider-B7c8-dk7.js";import{r as l,c as n,a as d,b as f,d as m,h as p,e as i}from"./index-frrM4VUH.js";const b={__name:"MandelBoxFractalView",setup(u){const e=l(-3),t=l(1),s=n(()=>`
 precision highp float;
 
 uniform vec2 u_resolution;
@@ -8,13 +8,13 @@ uniform float u_time;
 uniform float u_scale;
 uniform float u_foldLimit;
 
-const float MAX_DISTANCE = 17.0;
-const float MIN_RADIUS2 = 0.25;   // rayon min²
-const float FIXED_RADIUS2 = 1.0;  // rayon fixe²
-const int MAX_ITER = 14;
-const float EPSILON = 0.0005;
-const int MAX_STEPS = 100;
-const float SURFACE_DIST = 0.0005;
+const float MAX_DISTANCE = 12.0;
+const float MIN_RADIUS2 = 0.25;
+const float FIXED_RADIUS2 = 1.0;
+const int MAX_ITER = 10;
+const float EPSILON = 0.001;
+const int MAX_STEPS = 64;
+const float SURFACE_DIST = 0.001;
 
 //------------------------------------------------------
 // Box folding
@@ -58,6 +58,31 @@ float SDF(vec3 pos) {
     return (r - 2.0) / abs(dr);        // DE conservateur
 }
 
+// Version qui retourne aussi les données pour la coloration
+vec4 SDF_detailed(vec3 pos) {
+    vec3 z = pos;
+    float dr = 1.0;
+    float orbit_trap = 1e10;
+    float iterations = 0.0;
+
+    for (int i = 0; i < MAX_ITER; i++) {
+        box_folding(z);
+        sphere_folding(z, dr);
+
+        // Orbit trap pour coloration
+        orbit_trap = min(orbit_trap, length(z));
+
+        z = z * u_scale + pos;
+        dr = dr * abs(u_scale) + 1.0;
+        iterations = float(i);
+    }
+
+    float r = length(z);
+    float dist = (r - 2.0) / abs(dr);
+
+    return vec4(dist, iterations / float(MAX_ITER), orbit_trap, r);
+}
+
 //------------------------------------------------------
 // Calcul de la normale
 //------------------------------------------------------
@@ -76,7 +101,7 @@ vec3 get_normal(vec3 p) {
 float calcAO(vec3 pos, vec3 normal) {
     float ao = 0.0;
     float scale = 1.0;
-    for (int i = 0; i < 5; i++) {
+    for (int i = 0; i < 3; i++) {  // réduit de 5 à 3 pour meilleures perfs
         float hr = 0.01 + 0.02 * float(i);
         vec3 aopos = normal * hr + pos;
         float dd = SDF(aopos);
@@ -87,9 +112,9 @@ float calcAO(vec3 pos, vec3 normal) {
 }
 
 //------------------------------------------------------
-// Ray marching (corrigé et stabilisé)
+// Ray marching (retourne distance et données de coloration)
 //------------------------------------------------------
-float ray_marching(vec3 pt, vec3 dir) {
+vec4 ray_marching(vec3 pt, vec3 dir) {
     float total_distance = 0.0;
 
     for (int i = 0; i < MAX_STEPS; i++) {
@@ -97,13 +122,16 @@ float ray_marching(vec3 pt, vec3 dir) {
         float distance = SDF(pos);
 
         float hitEps = max(EPSILON, SURFACE_DIST * total_distance);
-        if (distance < hitEps) return max(total_distance, 0.001);
-        if (total_distance > MAX_DISTANCE) return -1.0;
+        if (distance < hitEps) {
+            vec4 details = SDF_detailed(pos);
+            return vec4(max(total_distance, 0.001), details.yzw);
+        }
+        if (total_distance > MAX_DISTANCE) return vec4(-1.0, 0.0, 0.0, 0.0);
 
         total_distance += distance * 0.85; // facteur de sécurité
     }
 
-    return -1.0;
+    return vec4(-1.0, 0.0, 0.0, 0.0);
 }
 
 //------------------------------------------------------
@@ -116,11 +144,11 @@ void main() {
     // Position caméra
     vec3 base_pos = vec3(0.0, 0.0, 3.5);
     float travel = t * 0.08;
-    vec3 camera_pos = base_pos + vec3(0.0, 0.0, -travel);
+    vec3 camera_pos = base_pos + vec3(0.0, 0.0, -travel) *0.0;
 
     // Rotations caméra
     float yaw = u_offset.x * 3.14159;
-    float pitch = u_offset.y * 1.57;
+    float pitch = -u_offset.y * 1.57;
 
     vec3 forward = normalize(vec3(
         sin(yaw) * cos(pitch),
@@ -145,7 +173,12 @@ void main() {
         skyGradient
     );
 
-    float distance = ray_marching(camera_pos, ray_dir);
+    vec4 march_result = ray_marching(camera_pos, ray_dir);
+    float distance = march_result.x;
+    float iter_ratio = march_result.y;
+    float orbit_trap = march_result.z;
+    float final_radius = march_result.w;
+
     vec3 color = skyColor;
 
     if (distance > 0.0 && distance < MAX_DISTANCE) {
@@ -165,14 +198,47 @@ void main() {
 
         float ao = calcAO(hit_point, normal);
 
-        // Couleurs
-        float depth = distance / MAX_DISTANCE;
-        vec3 color1 = vec3(0.9, 0.6, 0.3);
-        vec3 color2 = vec3(0.3, 0.4, 0.8);
-        vec3 base_color = mix(color1, color2, depth);
+        // === Système de couleurs avec propagation depuis le centre ===
 
-        float normalVariation = abs(normal.y);
-        base_color = mix(base_color, vec3(0.7, 0.3, 0.5), normalVariation * 0.4);
+        // Distance du point de hit depuis l'origine
+        float distFromOrigin = length(hit_point);
+
+        // Palette de couleurs
+        vec3 color1 = vec3(0.25, 0.30, 0.45);   // Bleu vif
+        vec3 color2 = vec3(0.65, 0.35, 0.50);   // Prune saturé
+        vec3 color3 = vec3(0.70, 0.50, 0.35);   // Brun orangé riche
+        vec3 color4 = vec3(0.40, 0.60, 0.65);   // Bleu-vert lumineux
+        vec3 color5 = vec3(0.75, 0.65, 0.40);   // Beige doré chaud
+
+        // Propagation basée sur la distance + orbit trap pour plus de complexité
+        float colorSpread = fract(distFromOrigin * 0.8 + orbit_trap * 1.5 - t * 0.3);
+
+        // Interpolation fluide entre les couleurs avec smoothstep
+        vec3 base_color;
+        float segment = colorSpread * 4.0;
+
+        if (segment < 1.0) {
+            base_color = mix(color1, color2, smoothstep(0.0, 1.0, segment));
+        } else if (segment < 2.0) {
+            base_color = mix(color2, color3, smoothstep(0.0, 1.0, segment - 1.0));
+        } else if (segment < 3.0) {
+            base_color = mix(color3, color4, smoothstep(0.0, 1.0, segment - 2.0));
+        } else {
+            base_color = mix(color4, color5, smoothstep(0.0, 1.0, segment - 3.0));
+        }
+
+        // Modulation subtile basée sur les composantes XYZ
+        float spatialMod = sin(hit_point.x * 2.0) * 0.06 +
+                          sin(hit_point.y * 2.5) * 0.06 +
+                          sin(hit_point.z * 2.0) * 0.06;
+        base_color += spatialMod;
+
+        // Variation très légère basée sur les itérations
+        base_color = mix(base_color, base_color * 1.15, iter_ratio * 0.15);
+
+        // Accentuation réduite basée sur la normale
+        float normalEdge = pow(1.0 - abs(dot(normal, view_dir)), 2.0);
+        base_color = mix(base_color, vec3(0.7, 0.65, 0.6), normalEdge * 0.1);
 
         float ambient = 0.25;
         float lighting = ambient + diffuse1 * 0.6 + diffuse2 * 0.4;
@@ -181,6 +247,7 @@ void main() {
         color += vec3(1.0) * spec * 0.5;
 
         // Brouillard
+        float depth = distance / MAX_DISTANCE;
         float fog = smoothstep(0.3, 1.0, depth);
         color = mix(color, vec3(0.02, 0.01, 0.05), fog * 0.4);
     }
@@ -190,4 +257,4 @@ void main() {
     gl_FragColor = vec4(color, 1.0);
 }
 
-`);return(_,o)=>(m(),f(s,{fragmentShader:c.value,"custom-uniforms":{scale:e.value,foldLimit:a.value},zoomImpactOnOffset:!1},{default:d(()=>[o[2]||(o[2]=p(" > ",-1)),i(l,{modelValue:e.value,"onUpdate:modelValue":o[0]||(o[0]=t=>e.value=t),min:-5,max:5,step:.01,label:"Scale"},null,8,["modelValue"]),i(l,{modelValue:a.value,"onUpdate:modelValue":o[1]||(o[1]=t=>a.value=t),min:0,max:5,step:.01,label:"Fold Limit"},null,8,["modelValue"])]),_:1},8,["fragmentShader","custom-uniforms"]))}};export{h as default};
+`);return(_,o)=>(m(),d(c,{fragmentShader:s.value,"custom-uniforms":{scale:e.value,foldLimit:t.value},zoomImpactOnOffset:!1},{default:f(()=>[o[2]||(o[2]=p(" > ",-1)),i(r,{modelValue:e.value,"onUpdate:modelValue":o[0]||(o[0]=a=>e.value=a),min:-5,max:5,step:.01,label:"Scale"},null,8,["modelValue"]),i(r,{modelValue:t.value,"onUpdate:modelValue":o[1]||(o[1]=a=>t.value=a),min:0,max:5,step:.01,label:"Fold Limit"},null,8,["modelValue"])]),_:1},8,["fragmentShader","custom-uniforms"]))}};export{b as default};
