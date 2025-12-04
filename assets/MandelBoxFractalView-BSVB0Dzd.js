@@ -1,4 +1,4 @@
-import{F as c}from"./FullScreenShader-uZ4b5job.js";import{R as r}from"./RangeSlider-B7c8-dk7.js";import{r as l,c as n,a as d,b as f,d as m,h as p,e as i}from"./index-frrM4VUH.js";const b={__name:"MandelBoxFractalView",setup(u){const e=l(-3),t=l(1),s=n(()=>`
+import{F as c}from"./FullScreenShader-BqJyaBy9.js";import{R as r}from"./RangeSlider-CdByZfbh.js";import{r as l,c as n,a as d,b as f,d as m,e as i}from"./index-BkrhsR9a.js";const h={__name:"MandelBoxFractalView",setup(p){const e=l(-3),t=l(1),s=n(()=>`
 precision highp float;
 
 uniform vec2 u_resolution;
@@ -257,4 +257,4 @@ void main() {
     gl_FragColor = vec4(color, 1.0);
 }
 
-`);return(_,o)=>(m(),d(c,{fragmentShader:s.value,"custom-uniforms":{scale:e.value,foldLimit:t.value},zoomImpactOnOffset:!1},{default:f(()=>[o[2]||(o[2]=p(" > ",-1)),i(r,{modelValue:e.value,"onUpdate:modelValue":o[0]||(o[0]=a=>e.value=a),min:-5,max:5,step:.01,label:"Scale"},null,8,["modelValue"]),i(r,{modelValue:t.value,"onUpdate:modelValue":o[1]||(o[1]=a=>t.value=a),min:0,max:5,step:.01,label:"Fold Limit"},null,8,["modelValue"])]),_:1},8,["fragmentShader","custom-uniforms"]))}};export{b as default};
+`);return(u,o)=>(m(),d(c,{fragmentShader:s.value,"custom-uniforms":{scale:e.value,foldLimit:t.value},zoomImpactOnOffset:!1},{default:f(()=>[i(r,{modelValue:e.value,"onUpdate:modelValue":o[0]||(o[0]=a=>e.value=a),min:-5,max:5,step:.01,label:"Scale"},null,8,["modelValue"]),i(r,{modelValue:t.value,"onUpdate:modelValue":o[1]||(o[1]=a=>t.value=a),min:0,max:5,step:.01,label:"Fold Limit"},null,8,["modelValue"])]),_:1},8,["fragmentShader","custom-uniforms"]))}};export{h as default};
