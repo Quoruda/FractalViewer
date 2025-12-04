@@ -281,7 +281,6 @@ void main() {
       :custom-uniforms="{scale: scale, foldLimit: foldLimit}"
       :zoomImpactOnOffset="false"
   >
-    >
 
     <RangeSlider
         v-model="scale"
