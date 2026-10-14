@@ -222,7 +222,7 @@ void main(){
         :max="2"
         :step="0.0001"
         :decimals="3"
-        label="Partie réelle"
+        label="Real part"
         :disabled="demoMode"
     />
 
@@ -232,7 +232,7 @@ void main(){
         :max="2"
         :step="0.0001"
         :decimals="3"
-        label="Partie imaginaire"
+        label="Imaginary part"
         :disabled="demoMode"
     />
 
@@ -243,10 +243,10 @@ void main(){
             type="checkbox"
             v-model="demoMode"
             class="demo-checkbox-input"
-            aria-label="Activer le mode démonstration"
+            aria-label="Toggle demo mode"
         />
         <span class="demo-custom" aria-hidden="true"></span>
-        <span class="demo-label" style="user-select: none;">Mode démonstration</span>
+        <span class="demo-label" style="user-select: none;">Demo mode</span>
       </label>
     </div>
   </FullScreenShader>

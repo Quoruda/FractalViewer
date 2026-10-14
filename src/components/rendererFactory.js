@@ -30,10 +30,10 @@ export class RendererFactory {
         // Cas 2 : Force WebGPU
         else if (preferredRenderer === 'webgpu') {
             if (!hasWGSL) {
-                warnings.push('WebGPU demandé mais pas de shaders WGSL fournis. Fallback vers WebGL.');
+                warnings.push('WebGPU requested but no WGSL shaders provided. Falling back to WebGL.');
                 selectedType = 'webgl';
             } else if (!this.isWebGPUAvailable()) {
-                warnings.push('WebGPU demandé mais non disponible sur ce navigateur. Fallback vers WebGL.');
+                warnings.push('WebGPU requested but not supported in this browser. Falling back to WebGL.');
                 selectedType = 'webgl';
             } else {
                 selectedType = 'webgpu';
@@ -48,7 +48,7 @@ export class RendererFactory {
             } else {
                 selectedType = 'webgl';
                 if (!hasWGSL && this.isWebGPUAvailable()) {
-                    warnings.push('WebGPU disponible mais pas de shaders WGSL fournis. Utilisation de WebGL.');
+                    warnings.push('WebGPU available but no WGSL shaders provided. Using WebGL.');
                 }
             }
         }
@@ -64,7 +64,7 @@ export class RendererFactory {
                 });
             } catch (error) {
                 // NOUVEAU: Fallback automatique vers WebGL si WebGPU échoue
-                warnings.push(`WebGPU initialization failed: ${error.message}. Fallback vers WebGL.`);
+                warnings.push(`WebGPU initialization failed: ${error.message}. Falling back to WebGL.`);
                 selectedType = 'webgl';
                 renderer = new WebGLRenderer(canvas, options);
             }

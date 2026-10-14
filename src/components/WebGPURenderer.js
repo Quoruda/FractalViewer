@@ -16,13 +16,13 @@ export class WebGPURenderer extends BaseRenderer {
     async initialize(shaders) {
         try {
             if (!navigator.gpu) {
-                throw new Error('WebGPU non supporté par ce navigateur');
+                throw new Error('WebGPU is not supported by this browser');
             }
 
             // Obtenir l'adaptateur et le device
             const adapter = await navigator.gpu.requestAdapter();
             if (!adapter) {
-                throw new Error('Aucun adaptateur WebGPU trouvé');
+                throw new Error('No WebGPU adapter found');
             }
 
             this.device = await adapter.requestDevice();

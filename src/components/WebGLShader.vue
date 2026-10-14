@@ -167,23 +167,23 @@ async function initRenderer() {
     render();
 
   } catch (e) {
-    error.value = `Erreur d'initialisation: ${e.message}`;
+    error.value = `Initialization error: ${e.message}`;
     console.error('Renderer initialization failed:', e);
 
     if (currentRenderer.value !== 'webgl' && !renderer) {
       try {
-        console.warn('Tentative de fallback WebGL de secours...');
+        console.warn('Attempting emergency WebGL fallback...');
         renderer = new (await import('./WebGLRenderer.js')).WebGLRenderer(canvas.value);
         await renderer.initialize({
           vertex: props.vertexShader,
           fragment: props.fragmentShader
         });
         currentRenderer.value = 'webgl';
-        warnings.value.push('Fallback vers WebGL de secours');
+        warnings.value.push('Fallback to emergency WebGL');
         error.value = '';
         render();
       } catch (fallbackError) {
-        error.value = `Impossible d'initialiser un renderer: ${fallbackError.message}`;
+        error.value = `Unable to initialize renderer: ${fallbackError.message}`;
       }
     }
   }

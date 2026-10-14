@@ -18,7 +18,7 @@ export class BaseRenderer {
      * @returns {Promise<void>}
      */
     async initialize(shaders) {
-        throw new Error('initialize() doit être implémentée');
+        throw new Error('initialize() must be implemented');
     }
 
     /**
@@ -26,21 +26,21 @@ export class BaseRenderer {
      * @param {Object} uniforms - { time, resolution, offset, zoom, ... }
      */
     setUniforms(uniforms) {
-        throw new Error('setUniforms() doit être implémentée');
+        throw new Error('setUniforms() must be implemented');
     }
 
     /**
      * Effectue un rendu
      */
     render() {
-        throw new Error('render() doit être implémentée');
+        throw new Error('render() must be implemented');
     }
 
     /**
      * Nettoie les ressources
      */
     dispose() {
-        throw new Error('dispose() doit être implémentée');
+        throw new Error('dispose() must be implemented');
     }
 
     /**
@@ -48,6 +48,6 @@ export class BaseRenderer {
      * @returns {string} 'webgl' | 'webgpu'
      */
     getType() {
-        throw new Error('getType() doit être implémentée');
+        throw new Error('getType() must be implemented');
     }
 }

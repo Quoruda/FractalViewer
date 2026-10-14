@@ -17,7 +17,7 @@ export class WebGLRenderer extends BaseRenderer {
                 this.canvas.getContext('experimental-webgl');
 
             if (!this.gl) {
-                throw new Error('WebGL non supporté');
+                throw new Error('WebGL not supported');
             }
 
             const vertShader = this._createShader(this.gl.VERTEX_SHADER, shaders.vertex);

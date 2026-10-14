@@ -22,11 +22,10 @@ const links = [
     <transition name="fade">
       <div class="home" v-if="showNav">
         <div class="content-wrapper">
-          <h1 class="title">Visualisateur de fractales</h1>
+          <h1 class="title">Fractal Viewer</h1>
           <p class="subtitle">
-            Ici tu pourras observer différentes fractales, d'étranges et magnifiques
-            structures mathématiques. N'hésite pas à te déplacer et à zoomer pour
-            observer leurs particularités.
+            Explore various fractals—fascinating and intricate mathematical
+            structures. Feel free to pan and zoom to discover their details.
           </p>
 
           <ul class="links">
