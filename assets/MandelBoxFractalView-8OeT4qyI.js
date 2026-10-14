@@ -1,4 +1,4 @@
-import{F as c}from"./FullScreenShader-BqJyaBy9.js";import{R as r}from"./RangeSlider-CdByZfbh.js";import{r as l,c as n,a as d,b as f,d as m,e as i}from"./index-BkrhsR9a.js";const h={__name:"MandelBoxFractalView",setup(p){const e=l(-3),t=l(1),s=n(()=>`
+import{F as c}from"./FullScreenShader-Cm3M3L9t.js";import{R as r}from"./RangeSlider-CXPvcUhK.js";import{r as l,c as n,a as d,b as f,d as m,e as i}from"./index-BuQozpK4.js";const h={__name:"MandelBoxFractalView",setup(p){const e=l(-3),t=l(1),s=n(()=>`
 precision highp float;
 
 uniform vec2 u_resolution;
