@@ -1,44 +1,80 @@
-# vue-project
+# Fractal Viewer
 
-This template should help get you started developing with Vue 3 in Vite.
+A real-time 2D and 3D fractal visualizer running in the browser, built with Vue 3 and WebGL/WebGPU shaders.
 
-## Recommended IDE Setup
+**Live Demo**: [https://quoruda.github.io/FractalViewer/](https://quoruda.github.io/FractalViewer/)
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## Preview
 
-## Recommended Browser Setup
+| 2D Fractal (Julia / Mandelbrot) | 3D Fractal (Mandelbox Raymarching) |
+| :---: | :---: |
+| ![2D Fractal](fractal_2D.png) | ![3D Mandelbox](fractal_3D.png) |
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd) 
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+## Features
 
-## Customize configuration
+### Supported Fractals
+- **Julia Set (2D)**: Interactive tuning of real ($r$) and imaginary ($i$) parameters via sliders, with a demo mode smoothly interpolating between over 30 classic presets (Douady rabbit, Siegel disk, dendritic spirals, etc.).
+- **Mandelbrot Set (2D)**: Deep iteration rendering with smooth color cycling.
+- **Burning Ship (2D)**: Absolute-value variant producing flame-like structures.
+- **Mandelbox (3D)**: Real-time raymarched 3D fractal based on box and sphere folding distance estimation. Includes adjustable scale, fold limits, camera pitch/yaw rotation, ambient occlusion, and orbit-trap coloring.
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+### Navigation & Controls
+- **Mouse**: Click and drag to pan (or rotate the 3D camera), scroll wheel to zoom at cursor position.
+- **Touch**: Single-finger drag, pinch to zoom.
+- **Interface**: Collapsible navigation overlay and real-time parameter sliders.
 
-## Project Setup
+### Technical Overview
+- **Vue 3** (Composition API) + **Vite**.
+- **Vue Router** with hash mode for GitHub Pages compatibility.
+- Modular renderer system (`RendererFactory`) handling WebGL (GLSL) with automated fallback and experimental WebGPU (WGSL) support.
 
-```sh
+## Getting Started
+
+### Prerequisites
+
+- Node.js `^20.19.0` or `>=22.12.0`
+- A browser supporting WebGL
+
+### Installation
+
+```bash
+git clone https://github.com/Quoruda/FractalViewer.git
+cd FractalViewer
 npm install
 ```
 
-### Compile and Hot-Reload for Development
+### Development Server
 
-```sh
+```bash
 npm run dev
 ```
 
-### Compile and Minify for Production
+### Production Build
 
-```sh
+```bash
 npm run build
 ```
 
-### Lint with [ESLint](https://eslint.org/)
+To preview the build locally:
 
-```sh
+```bash
+npm run preview
+```
+
+### Deployment
+
+Deploy to GitHub Pages:
+
+```bash
+npm run deploy
+```
+
+### Linting
+
+```bash
 npm run lint
 ```
+
+## License
+
+MIT
