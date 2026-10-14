@@ -8,7 +8,7 @@ A real-time 2D and 3D fractal visualizer running in the browser, built with Vue 
 
 | 2D Fractal (Julia / Mandelbrot) | 3D Fractal (Mandelbox Raymarching) |
 | :---: | :---: |
-| ![2D Fractal](fractal_2D.png) | ![3D Mandelbox](fractal_3D.png) |
+| ![2D Fractal](.github/assets/fractal_2D.png) | ![3D Mandelbox](.github/assets/fractal_3D.png) |
 
 ## Features
 
